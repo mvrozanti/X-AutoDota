@@ -105,6 +105,8 @@ void mouseClick(int x, int y) {
     event.type = ButtonRelease;
     event.xbutton.state = 0x100;
     if (XSendEvent(d, PointerWindow, True, 0xfff, &event) == 0) fprintf(stderr, "Error\n");
+    XFlush(d);
+    usleep(200);
     XWarpPointer(d, None, root, 0, 0, 0, 0, origin[0], origin[1]);
     XFlush(d);
     XCloseDisplay(d);
