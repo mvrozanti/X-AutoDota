@@ -26,6 +26,24 @@
 #include<thread>
 
 using namespace std;
+int* center_of_screen = new int[2]{
+    2320,540
+};
+int* accept_color = new int[3]{
+    59,93,77
+};
+int* radiant_pos = new int[2] {
+    1616, 965
+};
+int* dire_pos = new int[2] {
+    1659, 943
+};
+int* team_color_radiant = new int[3] {
+    13, 178, 28
+};
+int* team_color_dire = new int[3] {
+    12, 213, 27
+};
 
 static int* GetPixelAt(int x, int y) {
     XColor c;
@@ -71,7 +89,6 @@ static int* GetMousePos() {
     return new int[2] {
         root_x, root_y
     };
-
 }
 
 static int is_same_color(int* color1, int* color2) {
@@ -101,12 +118,11 @@ void mouseClick(int x, int y) {
     }
     if (XSendEvent(d, PointerWindow, True, 0xfff, &event) == 0) fprintf(stderr, "Error\n");
     XFlush(d);
-    usleep(100000);
+    usleep(1000);
     event.type = ButtonRelease;
     event.xbutton.state = 0x100;
     if (XSendEvent(d, PointerWindow, True, 0xfff, &event) == 0) fprintf(stderr, "Error\n");
     XFlush(d);
-    usleep(200);
     XWarpPointer(d, None, root, 0, 0, 0, 0, origin[0], origin[1]);
     XFlush(d);
     XCloseDisplay(d);
@@ -115,7 +131,6 @@ void mouseClick(int x, int y) {
 void beep() {
     int freq = 2000; // freq in hz
     int len = 1000; // len in ms
-
     int fd = open("/dev/console", O_WRONLY);
     ioctl(fd, KIOCSOUND, (int) (1193180 / freq));
     usleep(1000 * len);
@@ -123,28 +138,23 @@ void beep() {
     close(fd);
 }
 
+static void acceptMatch(){
+    while(true){
+        int* center_pixel = GetPixelAt(center_of_screen[0], center_of_screen[1]);
+        printf("%d,%d,%d\n", center_pixel[0], center_pixel[1], center_pixel[2]);
+        //        cout << color[0] << ", " << color[1] << ", " << color[2];
+        if (is_same_color(center_pixel, accept_color)) { // should approximate on eventual failure ?
+            mouseClick(center_of_screen[0], center_of_screen[1]);
+            break;
+        }
+    }
+}
+
 static void tryAndPickMid() {
     while (true) {
-        //        int* color = GetPixelAt(1659, 943);
-        //        printf("%d,%d,%d", color[0], color[1], color[2]);
-        //        int* m_pos = GetMousePos();
-        //        cout << m_pos[0] << " " << m_pos[1] << endl;
-        int* radiant_pos = new int[2] {
-            1616, 965
-        };
-        int* dire_pos = new int[2] {
-            1659, 943
-        };
-        int* team_color_radiant = new int[3] {
-            13, 178, 28
-        };
-        int* team_color_dire = new int[3] {
-            12, 213, 27
-        };
-        //        int* dire_pos = new int[2] {1616, 965};
         int* radiant_color = GetPixelAt(radiant_pos[0], radiant_pos[1]);
         int* dire_color = GetPixelAt(dire_pos[0], dire_pos[1]);
-        printf("%d,%d,%d\n", radiant_color[0], radiant_color[1], radiant_color[2]);
+        printf("Radiant pos color: %d,%d,%d\n", radiant_color[0], radiant_color[1], radiant_color[2]);
         //        cout << color[0] << ", " << color[1] << ", " << color[2];
         if (is_same_color(radiant_color, team_color_radiant)) { // should approximate on eventual failure ?
             mouseClick(radiant_pos[0], radiant_pos[1]);
@@ -154,6 +164,7 @@ static void tryAndPickMid() {
             break;
         }
     }
+    exit(0);
 }
 
 static void LogMe(const char * fmt, ...) {
@@ -206,13 +217,14 @@ static int listen_for_keys() {
                         szKeysym = XKeycodeToKeysym(display, iKeyCode, 0);
                         szKeyString = XKeysymToString(szKeysym);
                         XGetInputFocus(display, &focusWin, &iReverToReturn);
-                        printf("%d", iKeyCode);
                         fflush(stdout);
                         switch (iKeyCode) {
                             case 91:
                                 cout << '!';
-                                thread t(tryAndPickMid);
-                                t.detach();
+                                thread t_match(acceptMatch);
+                                t_match.detach();
+                                thread t_mid(tryAndPickMid);
+                                t_mid.detach();
                                 break;
                         }
                     }
@@ -226,6 +238,9 @@ static int listen_for_keys() {
 }
 
 int main(int argc, char** argv) {
-    listen_for_keys();
+    thread t_match(acceptMatch);
+    t_match.detach();
+    tryAndPickMid();
+//    listen_for_keys();
 }
 
