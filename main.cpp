@@ -49,6 +49,7 @@ static int* GetPixelAt(int x, int y) {
     XColor c;
     Display *d = XOpenDisplay((char *) NULL);
     XImage *image;
+    XMapRaised(d, RootWindow(d, DefaultScreen(d));
     image = XGetImage(d, RootWindow(d, DefaultScreen(d)), x, y, 1, 1, AllPlanes, XYPixmap);
     c.pixel = XGetPixel(image, 0, 0);
     XFree(image);
@@ -145,18 +146,18 @@ static void acceptMatch(){
         //        cout << color[0] << ", " << color[1] << ", " << color[2];
         if (is_same_color(center_pixel, accept_color)) { // should approximate on eventual failure ?
             mouseClick(center_of_screen[0], center_of_screen[1]);
-            break;
         }
     }
 }
 
 static void tryAndPickMid() {
     while (true) {
+        printf("Reading colors...");
         int* radiant_color = GetPixelAt(radiant_pos[0], radiant_pos[1]);
         int* dire_color = GetPixelAt(dire_pos[0], dire_pos[1]);
         printf("Radiant pos color: %d,%d,%d\n", radiant_color[0], radiant_color[1], radiant_color[2]);
         //        cout << color[0] << ", " << color[1] << ", " << color[2];
-        if (is_same_color(radiant_color, team_color_radiant)) { // should approximate on eventual failure ?
+        if (is_same_color(radiant_color, team_color_radiant)) { // should approximate failure?
             mouseClick(radiant_pos[0], radiant_pos[1]);
             break;
         } else if (is_same_color(dire_color, team_color_dire)) {
