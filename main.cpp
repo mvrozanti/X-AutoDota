@@ -45,11 +45,23 @@ int* team_color_dire = new int[3] {
     12, 213, 27
 };
 
-static int* GetPixelAt(int x, int y) {
+int* pick_hero_pos = new int[2] {
+    2897, 805
+};
+
+int* grim_stroke = new int[2] {
+    2170, 587
+};
+
+int* grim_stroke_color = new int[3] { 
+    197,177,171
+};
+
+int* getPixelAt(int x, int y) {
     XColor c;
     Display *d = XOpenDisplay((char *) NULL);
     XImage *image;
-    XMapRaised(d, RootWindow(d, DefaultScreen(d));
+    XMapRaised(d, RootWindow(d, DefaultScreen(d)));
     image = XGetImage(d, RootWindow(d, DefaultScreen(d)), x, y, 1, 1, AllPlanes, XYPixmap);
     c.pixel = XGetPixel(image, 0, 0);
     XFree(image);
@@ -61,7 +73,7 @@ static int* GetPixelAt(int x, int y) {
     return color;
 }
 
-static int* GetMousePos() {
+int* GetMousePos() {
     int number_of_screens;
     int i;
     Bool result;
@@ -92,7 +104,7 @@ static int* GetMousePos() {
     };
 }
 
-static int is_same_color(int* color1, int* color2) {
+int is_same_color(int* color1, int* color2) {
     return color1[0] == color2[0] && color1[1] == color2[1] && color1[2] == color2[2];
 }
 
@@ -139,23 +151,20 @@ void beep() {
     close(fd);
 }
 
-static void acceptMatch(){
+void acceptMatch(){
     while(true){
-        int* center_pixel = GetPixelAt(center_of_screen[0], center_of_screen[1]);
-        printf("%d,%d,%d\n", center_pixel[0], center_pixel[1], center_pixel[2]);
-        //        cout << color[0] << ", " << color[1] << ", " << color[2];
+        int* center_pixel = getPixelAt(center_of_screen[0], center_of_screen[1]);
         if (is_same_color(center_pixel, accept_color)) { // should approximate on eventual failure ?
             mouseClick(center_of_screen[0], center_of_screen[1]);
         }
     }
 }
 
-static void tryAndPickMid() {
+void tryAndPickMid() {
     while (true) {
-        printf("Reading colors...");
-        int* radiant_color = GetPixelAt(radiant_pos[0], radiant_pos[1]);
-        int* dire_color = GetPixelAt(dire_pos[0], dire_pos[1]);
-        printf("Radiant pos color: %d,%d,%d\n", radiant_color[0], radiant_color[1], radiant_color[2]);
+        int* radiant_color = getPixelAt(radiant_pos[0], radiant_pos[1]);
+        int* dire_color = getPixelAt(dire_pos[0], dire_pos[1]);
+//         printf("Radiant pos color: %d,%d,%d\n", radiant_color[0], radiant_color[1], radiant_color[2]);
         //        cout << color[0] << ", " << color[1] << ", " << color[2];
         if (is_same_color(radiant_color, team_color_radiant)) { // should approximate failure?
             mouseClick(radiant_pos[0], radiant_pos[1]);
@@ -165,10 +174,9 @@ static void tryAndPickMid() {
             break;
         }
     }
-    exit(0);
 }
 
-static void LogMe(const char * fmt, ...) {
+void logMe(const char * fmt, ...) {
     va_list va_alist;
     char buf[256], logbuf[256];
     FILE* file;
@@ -189,7 +197,7 @@ static void LogMe(const char * fmt, ...) {
     }
 }
 
-static int listen_for_keys() {
+int listen_for_keys() {
     Display * display;
     char szKey[32];
     char szKeyOld[32] = {0};
@@ -238,10 +246,56 @@ static int listen_for_keys() {
     XCloseDisplay(display);
 }
 
-int main(int argc, char** argv) {
-    thread t_match(acceptMatch);
-    t_match.detach();
-    tryAndPickMid();
-//    listen_for_keys();
+void select_hero(char* hero){
+    while(true) {
+        if(hero == "grim"){
+            int* grim_pixel = getPixelAt(grim_stroke[0], grim_stroke[1]);
+            if(is_same_color(grim_pixel, grim_stroke_color)){
+                mouseClick(grim_stroke[0], grim_stroke[1]);
+                usleep(999999);
+                mouseClick(pick_hero_pos[0], pick_hero_pos[1]);
+                exit(0);
+            }
+        }
+    }
+}
+
+void keepShowingColorAt(int x, int y){
+    int* color = getPixelAt(x, y);
+    printf("%d,%d,%d\n", color[0], color[1], color[2]);
+    usleep(99999);
+    keepShowingColorAt(x,y);
+}
+
+void nullWhile(){
+    while(true);;
+}
+
+int main() {
+    const char *argv[] = { "kekin", "-p", "grim", "-m"};
+    int argc = sizeof(argv) / sizeof(argv[0]);
+    char c;
+    while ((c = getopt(argc, (char **)argv, "m?:a?:p:d?:")) != -1) {
+        switch(c) {
+            case 'd':{
+                keepShowingColorAt(grim_stroke[0], grim_stroke[1]);
+                argc = 0;
+                }
+            case 'p':{
+                thread t_select_hero(select_hero, (char*) optarg);
+                t_select_hero.detach();
+                }
+            case 'a':{
+                thread t_mid(acceptMatch);
+                t_mid.detach();
+                }
+            case 'm':{
+                thread t_mid(tryAndPickMid);
+                t_mid.detach();
+                }
+        }
+    }
+    thread a(nullWhile);
+    a.join();
 }
 
